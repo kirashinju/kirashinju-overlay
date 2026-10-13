@@ -1,0 +1,228 @@
+<!doctype html>
+<!--
+  KiraShinju — Overlay de stream v2 (thème "spectre / ombre violette")
+  -------------------------------------------------------------------
+  Source navigateur Streamlabs / OBS : URL = file:///C:/Users/kylia/Videos/KiraShinju-Overlay/overlay.html
+  Largeur 2560 × Hauteur 1440. Fond transparent.
+
+  Options (après ?  séparées par &) :
+    game=Nom du jeu            affiche "EN JEU : ..." (vide = masqué)
+    msg=Texte1|Texte2|Texte3   messages qui défilent
+    goal=Objectif : 100 followers
+    avatar=avatar.png          ta photo de profil (fichier placé dans ce même dossier)
+    cam=1                      cadre caméra (bas gauche)
+    frame=0                    masque la bordure
+    smoke=0                    masque la fumée animée
+    camavatar=avatar.png       avatar dans le cadre caméra (sans webcam)
+    ranked=1                   widget LoL Plat → Émeraude (bas droite)
+    lp=0  w=0  l=0  div=1      tes LP, victoires, défaites, division Platine (1 à 4)
+  Exemple : overlay.html?game=League%20of%20Legends&avatar=avatar.png
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KiraShinju Overlay TikTok LoL</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --spectre: #8b2cf5;      /* violet principal */
+    --spectre-vif: #b45cff;  /* violet lumineux */
+    --nuit: rgba(8, 4, 16, 0.88);
+    --acier: #c9c4d6;        /* texte secondaire, gris froid */
+    --live: #ff2340;
+    --u: calc(100vw / 1080);
+  }
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: 'Rajdhani', 'Segoe UI', sans-serif; color: #fff; }
+  .hidden { display: none !important; }
+
+  /* ===== Bordure : coins angulaires seulement (moins chargé qu'un cadre complet) ===== */
+  .corner { position: fixed; width: calc(140 * var(--u)); height: calc(140 * var(--u)); pointer-events: none;
+    border-color: var(--spectre-vif); border-style: solid; border-width: 0;
+    filter: drop-shadow(0 0 calc(12 * var(--u)) var(--spectre)); animation: flicker 6s infinite; }
+  .tl { top: calc(10*var(--u)); left: calc(10*var(--u)); border-top-width: calc(5*var(--u)); border-left-width: calc(5*var(--u)); }
+  .tr { top: calc(10*var(--u)); right: calc(10*var(--u)); border-top-width: calc(5*var(--u)); border-right-width: calc(5*var(--u)); }
+  .bl { bottom: calc(10*var(--u)); left: calc(10*var(--u)); border-bottom-width: calc(5*var(--u)); border-left-width: calc(5*var(--u)); }
+  .br { bottom: calc(10*var(--u)); right: calc(10*var(--u)); border-bottom-width: calc(5*var(--u)); border-right-width: calc(5*var(--u)); }
+  @keyframes flicker { 0%,100%{opacity:1} 47%{opacity:1} 48%{opacity:.35} 50%{opacity:1} 52%{opacity:.6} 53%{opacity:1} }
+
+  /* ===== Fumée spectrale dans les coins bas ===== */
+  .smoke { position: fixed; bottom: calc(-180*var(--u)); width: calc(700*var(--u)); height: calc(420*var(--u));
+    background: radial-gradient(ellipse at center, rgba(139,44,245,.35), rgba(139,44,245,0) 65%);
+    filter: blur(calc(30*var(--u))); pointer-events: none; animation: drift 14s ease-in-out infinite; }
+  .smoke.l { left: calc(-200*var(--u)); }
+  .smoke.r { right: calc(-200*var(--u)); animation-delay: -7s; }
+  @keyframes drift { 0%,100%{ transform: translate(0,0) scale(1); opacity:.7 } 50%{ transform: translate(calc(60*var(--u)), calc(-50*var(--u))) scale(1.15); opacity:1 } }
+
+  /* ===== Badge (haut gauche) ===== */
+  .badge { position: fixed; top: calc(250*var(--u)); left: 50%; transform: translateX(-50%); white-space: nowrap;
+    display: flex; align-items: stretch; background: var(--nuit);
+    border-left: calc(6*var(--u)) solid var(--spectre-vif);
+    box-shadow: 0 0 calc(34*var(--u)) rgba(139,44,245,.55);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 34*var(--u)) 100%, 0 100%); }
+  .emblem { width: calc(120*var(--u)); display: grid; place-items: center;
+    background: linear-gradient(160deg, #2a0d4d, #0b0514); position: relative; overflow: hidden; }
+  .emblem .k { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(62*var(--u));
+    color: var(--spectre-vif); text-shadow: 0 0 calc(18*var(--u)) var(--spectre); }
+  .emblem img { width: 100%; height: 100%; object-fit: cover; object-position: 52% 40%; transform: scale(1.7); transform-origin: 52% 40%; }
+  .info { padding: calc(14*var(--u)) calc(70*var(--u)) calc(14*var(--u)) calc(24*var(--u));
+    display: flex; flex-direction: column; justify-content: center; gap: calc(6*var(--u)); }
+  .row { display: flex; align-items: center; gap: calc(16*var(--u)); }
+  .live { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(20*var(--u)); letter-spacing: .12em;
+    background: var(--live); padding: calc(4*var(--u)) calc(12*var(--u)); transform: skewX(-12deg); }
+  .live::before { content: "● "; animation: blink 1.4s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .name { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(50*var(--u)); letter-spacing: .08em;
+    color: #fff; text-shadow: 0 0 calc(14*var(--u)) var(--spectre), calc(3*var(--u)) calc(3*var(--u)) 0 #000; }
+  .game { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: calc(20*var(--u)); letter-spacing: .1em;
+    color: #000; background: var(--spectre-vif); padding: calc(3*var(--u)) calc(12*var(--u)); transform: skewX(-12deg); }
+  .msg { font-weight: 700; font-size: calc(28*var(--u)); color: var(--acier); letter-spacing: .03em;
+    min-height: 1.2em; transition: opacity .5s, transform .5s; }
+  .msg.out { opacity: 0; transform: translateX(calc(-12*var(--u))); }
+  .goal { font-weight: 700; font-size: calc(24*var(--u)); color: #fff;
+    border-left: calc(4*var(--u)) solid var(--spectre-vif); padding-left: calc(10*var(--u)); }
+
+  /* ===== Réseaux (sous le badge) ===== */
+  .socials { position: fixed; top: calc(176*var(--u)); left: 50%; transform: translateX(-50%); white-space: nowrap;
+    display: flex; gap: calc(14*var(--u)); }
+  .social { display: flex; align-items: center; background: var(--nuit);
+    box-shadow: 0 0 calc(18*var(--u)) rgba(139,44,245,.45);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 16*var(--u)) 100%, 0 100%);
+    animation: glow 6s ease-in-out infinite; }
+  .social:nth-child(2) { animation-delay: -3s; }
+  .social .tag { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(18*var(--u)); letter-spacing: .1em;
+    color: #000; background: var(--spectre-vif); padding: calc(7*var(--u)) calc(12*var(--u)); }
+  .social .handle { font-weight: 700; font-size: calc(26*var(--u)); color: #fff;
+    padding: calc(4*var(--u)) calc(30*var(--u)) calc(4*var(--u)) calc(12*var(--u)); }
+  @keyframes glow { 50% { box-shadow: 0 0 calc(30*var(--u)) rgba(180,92,255,.8); } }
+
+  /* ===== Cadre caméra ===== */
+  .cam { position: fixed; left: calc(34*var(--u)); bottom: calc(330*var(--u));
+    width: calc(480*var(--u)); height: calc(270*var(--u));
+    border: calc(4*var(--u)) solid var(--spectre-vif);
+    box-shadow: 0 0 calc(30*var(--u)) rgba(139,44,245,.7);
+    clip-path: polygon(0 0, calc(100% - 30*var(--u)) 0, 100% calc(30*var(--u)), 100% 100%, calc(30*var(--u)) 100%, 0 calc(100% - 30*var(--u))); }
+  .cam.has-avatar { background: radial-gradient(ellipse at center, #2a0d4d 0%, #0b0514 75%); }
+  .cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: calc(10*var(--u)); box-sizing: border-box;
+    filter: drop-shadow(0 0 calc(18*var(--u)) rgba(180,92,255,.7)); }
+  .cam span { z-index: 1; }
+  .cam span { position: absolute; top: 0; left: 0; font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: calc(20*var(--u)); color: #000; background: var(--spectre-vif); padding: calc(4*var(--u)) calc(14*var(--u)); }
+
+  /* ===== Widget classé LoL (bas droite, symétrique au cadre caméra ; centré si pas de cam) ===== */
+  .ranked.solo { right: auto; left: 50%; transform: translateX(-50%); width: calc(640*var(--u)); }
+  .ranked { position: fixed; right: calc(34*var(--u)); bottom: calc(330*var(--u));
+    width: calc(480*var(--u)); height: calc(270*var(--u)); background: var(--nuit);
+    border-right: calc(6*var(--u)) solid var(--spectre-vif);
+    box-shadow: 0 0 calc(30*var(--u)) rgba(139,44,245,.55);
+    clip-path: polygon(calc(30*var(--u)) 0, 100% 0, 100% calc(100% - 30*var(--u)), calc(100% - 30*var(--u)) 100%, 0 100%, 0 calc(30*var(--u)));
+    padding: calc(22*var(--u)) calc(26*var(--u)); box-sizing: border-box;
+    display: flex; flex-direction: column; justify-content: space-between; }
+  .ranked .ttl { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(18*var(--u)); letter-spacing: .14em;
+    color: #000; background: var(--spectre-vif); padding: calc(4*var(--u)) calc(12*var(--u)); align-self: flex-start; transform: skewX(-12deg); }
+  .ranked .path { display: flex; align-items: center; gap: calc(12*var(--u)); font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: calc(24*var(--u)); letter-spacing: .06em; white-space: nowrap; }
+  .ranked .plat { color: #5fe0d2; text-shadow: 0 0 calc(10*var(--u)) rgba(95,224,210,.6); }
+  .ranked .emer { color: #2ee59d; text-shadow: 0 0 calc(10*var(--u)) rgba(46,229,157,.6); }
+  .ranked .arr { flex: 1; height: calc(3*var(--u)); background: linear-gradient(90deg,#5fe0d2,var(--spectre-vif),#2ee59d); }
+  .ranked .bar { position: relative; height: calc(30*var(--u)); background: rgba(255,255,255,.07);
+    border: calc(2*var(--u)) solid rgba(180,92,255,.5); transform: skewX(-12deg); overflow: hidden; }
+  .ranked .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--spectre), var(--spectre-vif), #2ee59d);
+    box-shadow: 0 0 calc(16*var(--u)) var(--spectre-vif); transition: width 1s ease; }
+  .ranked .lp { position: absolute; inset: 0; display: grid; place-items: center; transform: skewX(12deg);
+    font-weight: 700; font-size: calc(22*var(--u)); text-shadow: 0 0 calc(4*var(--u)) #000, 0 0 calc(4*var(--u)) #000; }
+  .ranked .wl { display: flex; align-items: baseline; gap: calc(18*var(--u)); font-weight: 700; font-size: calc(24*var(--u)); color: var(--acier); }
+  .ranked .wl b { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: calc(36*var(--u)); }
+  .ranked .w { color: #2ee59d; } .ranked .l { color: var(--live); }
+  .ranked .wr { margin-left: auto; color: #fff; }
+</style>
+</head>
+<body>
+  <div id="frame"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div>
+  <div id="smoke"><div class="smoke l"></div><div class="smoke r"></div></div>
+
+  <div class="badge">
+    <div class="emblem" id="emblem"><span class="k">K</span></div>
+    <div class="info">
+      <div class="row"><span class="live">LIVE</span><span class="name">KIRASHINJU</span></div>
+      <div class="row"><span class="game hidden" id="game"></span><span class="msg" id="msg"></span></div>
+      <div class="goal hidden" id="goal"></div>
+    </div>
+  </div>
+
+  <div class="socials" id="socials">
+    <div class="social" id="s-tiktok"><span class="tag">TIKTOK</span><span class="handle" id="h-tiktok"></span></div>
+    <div class="social" id="s-twitch"><span class="tag">TWITCH</span><span class="handle" id="h-twitch"></span></div>
+  </div>
+
+  <div class="cam hidden" id="cam"><span>KIRASHINJU</span></div>
+
+  <div class="ranked hidden" id="ranked">
+    <span class="ttl">OBJECTIF ÉMERAUDE</span>
+    <div class="path"><span class="plat" id="cur">PLATINE I</span><span class="arr"></span><span class="emer">ÉMERAUDE IV</span></div>
+    <div class="bar"><div class="fill" id="fill"></div><div class="lp" id="lp">0 / 100 LP</div></div>
+    <div class="wl"><span>W <b class="w" id="w">0</b></span><span>L <b class="l" id="l">0</b></span><span class="wr" id="wr">Winrate —</span></div>
+  </div>
+
+<script>
+  const p = new URLSearchParams(location.search);
+  const $ = id => document.getElementById(id);
+
+  const messages = (p.get('msg') || 'Multigamer • on joue sans limite|Un follow pour rejoindre la team|Retrouve-moi sur TikTok et Twitch')
+    .split('|').map(s => s.trim()).filter(Boolean);
+
+  // Réseaux : modifiables via ?tiktok=...&twitch=... ; vide ou "0" = masqué ; socials=0 masque tout
+  const tiktok = p.has('tiktok') ? p.get('tiktok') : '@kirashinju4';
+  const twitch = p.has('twitch') ? p.get('twitch') : 'twitch.tv/kirashinju';
+  if (tiktok && tiktok !== '0') $('h-tiktok').textContent = tiktok; else $('s-tiktok').classList.add('hidden');
+  if (twitch && twitch !== '0') $('h-twitch').textContent = twitch; else $('s-twitch').classList.add('hidden');
+  if (p.get('socials') === '0') $('socials').classList.add('hidden');
+
+  // Place les réseaux juste sous le badge, quelle que soit sa hauteur (objectif affiché ou non)
+  const placeSocials = () => {
+    const b = document.querySelector('.badge').getBoundingClientRect();
+    $('socials').style.top = (b.bottom + window.innerWidth / 1080 * 14) + 'px';
+  };
+  addEventListener('load', placeSocials); addEventListener('resize', placeSocials);
+  document.fonts && document.fonts.ready.then(placeSocials);
+
+  if (p.get('game')) { $('game').textContent = 'EN JEU : ' + p.get('game'); $('game').classList.remove('hidden'); }
+  if (p.get('goal')) { $('goal').textContent = p.get('goal'); $('goal').classList.remove('hidden'); }
+  if (p.get('cam') === '1') $('cam').classList.remove('hidden');
+  // camavatar=fichier.png : affiche ton avatar dans le cadre caméra (si tu streames sans webcam)
+  if (p.get('camavatar')) {
+    const f2 = p.get('camavatar').replace(/[^\w.\-]/g, '');
+    const im2 = new Image(); im2.alt = ''; im2.src = f2;
+    im2.onload = () => { $('cam').classList.add('has-avatar'); $('cam').appendChild(im2); };
+  }
+  if (p.get('frame') === '0') $('frame').classList.add('hidden');
+  if (p.get('smoke') === '0') $('smoke').classList.add('hidden');
+
+  // ===== Widget classé : ?ranked=1&lp=0&w=0&l=0&div=1 =====
+  if (p.get('ranked') === '1') {
+    const num = (k, d, min, max) => Math.min(max, Math.max(min, parseInt(p.get(k) ?? d, 10) || 0));
+    const lp = num('lp', 0, 0, 100), w = num('w', 0, 0, 999), l = num('l', 0, 0, 999), div = num('div', 1, 1, 4);
+    $('cur').textContent = 'PLATINE ' + ['I','II','III','IV'][div - 1];
+    $('lp').textContent = lp + ' / 100 LP' + (div > 1 ? '  ·  encore ' + ((div - 1) * 100 + 100 - lp) + ' LP' : '');
+    $('w').textContent = w; $('l').textContent = l;
+    $('wr').textContent = (w + l) ? 'Winrate ' + Math.round(w / (w + l) * 100) + ' %' : 'Winrate —';
+    $('ranked').classList.remove('hidden');
+    if (p.get('cam') !== '1') $('ranked').classList.add('solo');
+    setTimeout(() => { $('fill').style.width = lp + '%'; }, 200);
+  }
+  if (p.get('avatar')) {
+    // Nom de fichier simple uniquement (pas de chemin) : l'image doit être dans le même dossier
+    const f = p.get('avatar').replace(/[^\w.\-]/g, '');
+    const img = new Image(); img.alt = ''; img.src = f;
+    img.onload = () => { $('emblem').innerHTML = ''; $('emblem').appendChild(img); };
+  }
+
+  let i = 0; const el = $('msg'); el.textContent = messages[0] || '';
+  if (messages.length > 1) setInterval(() => {
+    el.classList.add('out');
+    setTimeout(() => { i = (i + 1) % messages.length; el.textContent = messages[i]; el.classList.remove('out'); }, 500);
+  }, 8000);
+</script>
+</body>
+</html>
