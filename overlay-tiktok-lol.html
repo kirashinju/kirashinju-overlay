@@ -111,7 +111,8 @@
     font-size: calc(20*var(--u)); color: #000; background: var(--spectre-vif); padding: calc(4*var(--u)) calc(14*var(--u)); }
 
   /* ===== Widget classé LoL (bas droite, symétrique au cadre caméra ; centré si pas de cam) ===== */
-  .ranked.solo { right: auto; left: 50%; transform: translateX(-50%); width: calc(640*var(--u)); }
+  .ranked.solo { right: auto; left: 50%; transform: translateX(-50%); width: auto; min-width: calc(600*var(--u)); transform-origin: bottom center; }
+  .badge { transform-origin: top center; } .socials { transform-origin: top center; }
   .ranked { position: fixed; right: calc(34*var(--u)); bottom: calc(330*var(--u));
     width: calc(480*var(--u)); height: calc(270*var(--u)); background: var(--nuit);
     border-right: calc(6*var(--u)) solid var(--spectre-vif);
@@ -187,6 +188,23 @@
   addEventListener('load', placeSocials); addEventListener('resize', placeSocials);
   document.fonts && document.fonts.ready.then(placeSocials);
 
+
+  // ===== Anti-débordement : si un bloc dépasse 92 % de la largeur (police plus large, mise à l'échelle
+  // du logiciel de stream...), on le réduit proportionnellement au lieu de le laisser sortir de l'écran.
+  const fitAll = () => {
+    const max = window.innerWidth * 0.92;
+    ['.badge', '.socials', '.ranked.solo'].forEach(sel => {
+      const el = document.querySelector(sel); if (!el || el.classList.contains('hidden')) return;
+      el.style.transform = 'translateX(-50%)';
+      const w = el.getBoundingClientRect().width;
+      const k = w > max ? max / w : 1;
+      el.style.transform = 'translateX(-50%) scale(' + k.toFixed(3) + ')';
+    });
+    placeSocials();
+  };
+  addEventListener('load', fitAll); addEventListener('resize', fitAll);
+  document.fonts && document.fonts.ready.then(fitAll);
+  setInterval(fitAll, 2000); // le message défile et change de longueur
   if (p.get('game')) { $('game').textContent = 'EN JEU : ' + p.get('game'); $('game').classList.remove('hidden'); }
   if (p.get('goal')) { $('goal').textContent = p.get('goal'); $('goal').classList.remove('hidden'); }
   if (p.get('cam') === '1') $('cam').classList.remove('hidden');
