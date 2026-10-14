@@ -142,6 +142,18 @@
   .ranked .wl b { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: calc(36*var(--u)); }
   .ranked .w { color: #2ee59d; } .ranked .l { color: var(--live); }
   .ranked .wr { margin-left: auto; color: #fff; }
+
+  /* ===== v4 : widget compact placé en haut (entre les réseaux et le jeu),
+     hors de la zone du chat TikTok qui couvre le bas de l'écran ===== */
+  .ranked.solo { top: 462px; bottom: auto; height: auto; width: 900px; min-width: 0;
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "path path" "bar wl";
+    column-gap: 22px; row-gap: 12px; padding: 16px 26px; transform-origin: top center; }
+  .ranked.solo .ttl { display: none; }
+  .ranked.solo .path { grid-area: path; font-size: 26px; }
+  .ranked.solo .bar  { grid-area: bar; height: 30px; align-self: center; }
+  .ranked.solo .wl   { grid-area: wl; align-self: center; gap: 14px; font-size: 22px; }
+  .ranked.solo .wl b { font-size: 32px; }
+  .ranked.solo .wr   { margin-left: 6px; }
 </style>
 </head>
 <body>
